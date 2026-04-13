@@ -1,5 +1,7 @@
 # Lucas Infra Core
 
+![Deploy](https://github.com/seuusuario/maya-infra-core/actions/workflows/deploy.yml/badge.svg)
+
 Infraestrutura como código para o ambiente de avaliação CORE.
 
 ## Stack

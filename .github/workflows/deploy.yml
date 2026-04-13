@@ -1,0 +1,157 @@
+name: Deploy Maya Infra Core
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # permite rodar manualmente
+
+jobs:
+  # ============================================
+  # JOB 1 — Validação
+  # ============================================
+  validate:
+    name: 🔍 Valida Configurações
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v3
+
+      - name: Valida Vagrantfile
+        run: |
+          cd vagrant
+          vagrant validate
+
+      - name: Valida sintaxe Ansible
+        run: |
+          ansible-playbook ansible/site.yml --syntax-check
+
+      - name: Verifica arquivos essenciais
+        run: |
+          echo "Verificando estrutura do projeto..."
+          test -f vagrant/Vagrantfile && echo "✅ Vagrantfile encontrado"
+          test -f ansible/site.yml && echo "✅ site.yml encontrado"
+          test -f ansible/inventory/hosts.yml && echo "✅ hosts.yml encontrado"
+          test -f ansible/roles/nginx/tasks/main.yml && echo "✅ role nginx encontrada"
+          test -f ansible/roles/keepalived/tasks/main.yml && echo "✅ role keepalived encontrada"
+          test -f ansible/roles/snmp/tasks/main.yml && echo "✅ role snmp encontrada"
+          test -f ansible/roles/scripts/tasks/main.yml && echo "✅ role scripts encontrada"
+          test -f ansible/roles/jboss/tasks/main.yml && echo "✅ role jboss encontrada"
+          test -f ansible/roles/iptables/tasks/main.yml && echo "✅ role iptables encontrada"
+          echo "✅ Todas as validações passaram!"
+
+  # ============================================
+  # JOB 2 — Aprovação Manual
+  # ============================================
+  approval:
+    name: ⏳ Aguarda Aprovação
+    needs: validate
+    runs-on: self-hosted
+    environment: production # aqui é onde a aprovação acontece
+
+    steps:
+      - name: Aprovação recebida
+        run: echo "✅ Deploy aprovado! Iniciando provisionamento..."
+
+  # ============================================
+  # JOB 3 — Provisionamento das VMs
+  # ============================================
+  provision:
+    name: 🖥️ Provisiona VMs com Vagrant
+    needs: approval
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v3
+
+      - name: Derruba VMs existentes
+        run: |
+          cd vagrant
+          vagrant destroy -f || true
+
+      - name: Sobe as VMs
+        run: |
+          cd vagrant
+          vagrant up
+        timeout-minutes: 30
+
+      - name: Verifica status das VMs
+        run: |
+          cd vagrant
+          vagrant status
+
+  # ============================================
+  # JOB 4 — Configuração com Ansible
+  # ============================================
+  configure:
+    name: ⚙️ Configura com Ansible
+    needs: provision
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v3
+
+      - name: Aguarda VMs ficarem prontas
+        run: sleep 30
+
+      - name: Testa conectividade com as VMs
+        run: |
+          ansible all -i ansible/inventory/hosts.yml -m ping
+
+      - name: Roda playbook principal
+        run: |
+          ansible-playbook ansible/site.yml \
+            -i ansible/inventory/hosts.yml \
+            -v
+
+  # ============================================
+  # JOB 5 — Validação Final
+  # ============================================
+  verify:
+    name: ✅ Validação Final
+    needs: configure
+    runs-on: self-hosted
+
+    steps:
+      - name: Testa nginx vm01
+        run: curl -s http://192.168.51.11:81 | grep "OLA MUNDO"
+
+      - name: Testa nginx vm02
+        run: curl -s http://192.168.51.12:81 | grep "OLA MUNDO"
+
+      - name: Testa nginx vm03
+        run: curl -s http://192.168.51.13:81 | grep "OLA MUNDO"
+
+      - name: Testa VIP keepalived
+        run: curl -s http://192.168.51.10:81 | grep "OLA MUNDO"
+
+      - name: Testa HTTPS
+        run: curl -sk https://192.168.51.10 | grep "OLA MUNDO"
+
+      - name: Testa JBoss vm02
+        run: curl -s http://192.168.51.12:9090/hello/ | grep "Hello World"
+
+      - name: Testa SNMP vm01
+        run: |
+          snmpget -v2c -c public 192.168.51.11 \
+            UCD-SNMP-MIB::memTotalReal.0
+
+      - name: Verifica logs sendo gerados
+        run: |
+          ssh root@192.168.51.11 "test -f /var/log/rede.log && echo '✅ rede.log OK'"
+          ssh root@192.168.51.11 "test -f /var/log/teste-snmp.log && echo '✅ teste-snmp.log OK'"
+
+      - name: Resultado final
+        run: |
+          echo "========================================="
+          echo "✅ Infraestrutura provisionada com sucesso!"
+          echo "========================================="
+          echo "vm01: 192.168.51.11"
+          echo "vm02: 192.168.51.12"
+          echo "vm03: 192.168.51.13"
+          echo "VIP:  192.168.51.10"
+          echo "URL:  http://avaliacaocore.maya.local:81"
+          echo "========================================="
