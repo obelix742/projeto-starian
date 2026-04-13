@@ -70,7 +70,22 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v3
 
+      - name: Verifica se VMs já existem
+        id: check_vms
+        run: |
+          $env:PATH += ";C:\Program Files\Oracle\VirtualBox"
+          $vms = VBoxManage list vms
+          if ($vms -match "vm01") {
+            echo "vms_exist=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            echo "✅ VMs já existem, pulando provisionamento"
+          } else {
+            echo "vms_exist=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            echo "⚠️ VMs não encontradas, provisionando..."
+          }
+        shell: pwsh
+
       - name: Derruba VMs existentes
+        if: steps.check_vms.outputs.vms_exist == 'false'
         run: |
           cd vagrant
           vagrant destroy -f
@@ -78,6 +93,7 @@ jobs:
         shell: pwsh
 
       - name: Sobe as VMs
+        if: steps.check_vms.outputs.vms_exist == 'false'
         run: |
           cd vagrant
           vagrant up
@@ -86,8 +102,8 @@ jobs:
 
       - name: Verifica status das VMs
         run: |
-          cd vagrant
-          vagrant status
+          $env:PATH += ";C:\Program Files\Oracle\VirtualBox"
+          VBoxManage list runningvms
         shell: pwsh
 
   configure:
