@@ -3,81 +3,46 @@
 
 Vagrant.configure("2") do |config|
 
-  # Box base Oracle Linux 9
   config.vm.box = "oraclelinux/9"
   config.vm.box_url = "https://oracle.github.io/vagrant-projects/boxes/oraclelinux/9.json"
 
-  # Configurações globais
   config.vm.provider "virtualbox" do |vb|
     vb.memory = 2048
     vb.cpus = 2
     vb.customize ["modifyvm", :id, "--usbehci", "off"]
   end
 
-  # Desativa checagem de chave SSH
   config.ssh.insert_key = false
 
-  # ============================================
-  # VM01 — Master Keepalived
-  # ============================================
+  # VM01
   config.vm.define "vm01" do |vm01|
     vm01.vm.hostname = "vm01"
     vm01.vm.network "public_network",
       ip: "192.168.51.11",
       netmask: "255.255.255.224",
-      bridge: "Hyper-V Virtual Ethernet Adapter #3"
+      bridge: "Intel(R) Wi-Fi 6 AX201 160MHz"
 
     vm01.vm.provider "virtualbox" do |vb|
       vb.name = "vm01"
-
-      # Disco adicional para particionamento
-      disk = "vm01-disk.vdi"
-      unless File.exist?(disk)
-        vb.customize ["createhd",
-          "--filename", disk,
-          "--size", 15360]  # 15GB
-      end
-      vb.customize ["storageattach", :id,
-        "--storagectl", "SATA Controller",
-        "--port", 1,
-        "--device", 0,
-        "--type", "hdd",
-        "--medium", disk]
     end
 
-    # Provisiona com shell básico
     vm01.vm.provision "shell", inline: <<-SHELL
       echo "Configurando vm01..."
       hostnamectl set-hostname vm01
     SHELL
   end
 
-  # ============================================
-  # VM02 — JBoss
-  # ============================================
+  # VM02
   config.vm.define "vm02" do |vm02|
     vm02.vm.hostname = "vm02"
     vm02.vm.network "public_network",
       ip: "192.168.51.12",
       netmask: "255.255.255.224",
-      bridge: "Hyper-V Virtual Ethernet Adapter #3"
+      bridge: "Intel(R) Wi-Fi 6 AX201 160MHz"
 
     vm02.vm.provider "virtualbox" do |vb|
       vb.name = "vm02"
       vb.memory = 2048
-
-      disk = "vm02-disk.vdi"
-      unless File.exist?(disk)
-        vb.customize ["createhd",
-          "--filename", disk,
-          "--size", 15360]
-      end
-      vb.customize ["storageattach", :id,
-        "--storagectl", "SATA Controller",
-        "--port", 1,
-        "--device", 0,
-        "--type", "hdd",
-        "--medium", disk]
     end
 
     vm02.vm.provision "shell", inline: <<-SHELL
@@ -86,45 +51,22 @@ Vagrant.configure("2") do |config|
     SHELL
   end
 
-  # ============================================
-  # VM03 — Iptables
-  # ============================================
+  # VM03
   config.vm.define "vm03" do |vm03|
     vm03.vm.hostname = "vm03"
     vm03.vm.network "public_network",
       ip: "192.168.51.13",
       netmask: "255.255.255.224",
-      bridge: "Hyper-V Virtual Ethernet Adapter #3"
+      bridge: "Intel(R) Wi-Fi 6 AX201 160MHz"
 
     vm03.vm.provider "virtualbox" do |vb|
       vb.name = "vm03"
-
-      disk = "vm03-disk.vdi"
-      unless File.exist?(disk)
-        vb.customize ["createhd",
-          "--filename", disk,
-          "--size", 15360]
-      end
-      vb.customize ["storageattach", :id,
-        "--storagectl", "SATA Controller",
-        "--port", 1,
-        "--device", 0,
-        "--type", "hdd",
-        "--medium", disk]
     end
 
     vm03.vm.provision "shell", inline: <<-SHELL
       echo "Configurando vm03..."
       hostnamectl set-hostname vm03
     SHELL
-
-    # Roda o Ansible depois de criar as 3 VMs
-    vm03.vm.provision "ansible" do |ansible|
-      ansible.playbook = "../ansible/site.yml"
-      ansible.inventory_path = "../ansible/inventory/hosts.yml"
-      ansible.limit = "all"
-      ansible.verbose = "v"
-    end
   end
 
 end
