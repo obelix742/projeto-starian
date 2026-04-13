@@ -1,0 +1,27 @@
+---
+- name: Instala pacotes SNMP
+  dnf:
+    name:
+      - net-snmp
+      - net-snmp-utils
+    state: present
+
+- name: Copia configuração do snmpd
+  copy:
+    src: snmpd.conf
+    dest: /etc/snmp/snmpd.conf
+    mode: "0644"
+  notify: restart snmpd
+
+- name: Libera SNMP no firewall
+  firewalld:
+    service: snmp
+    permanent: yes
+    state: enabled
+  notify: restart firewalld
+
+- name: Habilita e inicia snmpd
+  systemd:
+    name: snmpd
+    enabled: yes
+    state: started

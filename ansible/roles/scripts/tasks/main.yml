@@ -1,0 +1,63 @@
+---
+- name: Cria diretório dos scripts
+  file:
+    path: /opt/scripts
+    state: directory
+    mode: "0755"
+
+- name: Copia script SNMP (apenas vm01)
+  copy:
+    src: coleta-snmp.sh
+    dest: /opt/scripts/coleta-snmp.sh
+    mode: "0755"
+  when: inventory_hostname == 'vm01'
+
+- name: Copia script troubleshooting (3 VMs)
+  copy:
+    src: troubleshooting.sh
+    dest: /opt/scripts/troubleshooting.sh
+    mode: "0755"
+
+- name: Copia script rede (apenas vm01)
+  copy:
+    src: rede.sh
+    dest: /opt/scripts/rede.sh
+    mode: "0755"
+  when: inventory_hostname == 'vm01'
+
+- name: Configura cron SNMP (apenas vm01)
+  cron:
+    name: "coleta snmp"
+    minute: "*"
+    job: "/opt/scripts/coleta-snmp.sh"
+  when: inventory_hostname == 'vm01'
+
+- name: Configura cron troubleshooting (3 VMs)
+  cron:
+    name: "troubleshooting"
+    minute: "*/5"
+    job: "/opt/scripts/troubleshooting.sh"
+
+- name: Cria serviço rede-monitor (apenas vm01)
+  copy:
+    dest: /etc/systemd/system/rede-monitor.service
+    content: |
+      [Unit]
+      Description=Monitor de Rede
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/scripts/rede.sh
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+  when: inventory_hostname == 'vm01'
+  notify: reload systemd
+
+- name: Habilita rede-monitor (apenas vm01)
+  systemd:
+    name: rede-monitor
+    enabled: yes
+    state: started
+  when: inventory_hostname == 'vm01'

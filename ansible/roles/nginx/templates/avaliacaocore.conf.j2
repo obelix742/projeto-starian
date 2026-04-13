@@ -1,0 +1,32 @@
+server {
+    listen 81;
+    server_name avaliacaocore.maya.local;
+
+    root /var/www/avaliacaocore;
+    index index.html;
+
+    access_log /var/log/nginx/avaliacaocore.maya.nginx-access.log;
+    error_log  /var/log/nginx/avaliacaocore.maya.nginx-error.log;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name avaliacaocore.maya.local;
+
+    ssl_certificate     /etc/nginx/ssl/avaliacaocore.crt;
+    ssl_certificate_key /etc/nginx/ssl/avaliacaocore.key;
+
+    root /var/www/avaliacaocore;
+    index index.html;
+
+    access_log /var/log/nginx/avaliacaocore.maya.nginx-access.log;
+    error_log  /var/log/nginx/avaliacaocore.maya.nginx-error.log;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

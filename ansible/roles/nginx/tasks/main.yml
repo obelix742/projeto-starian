@@ -1,0 +1,77 @@
+---
+- name: Instala nginx via dnf
+  dnf:
+    name: nginx
+    state: present
+
+- name: Cria diretório da aplicação
+  file:
+    path: /var/www/avaliacaocore
+    state: directory
+    owner: nginx
+    group: nginx
+    mode: "0755"
+
+- name: Cria página OLA MUNDO via DNF
+  copy:
+    content: "OLA MUNDO via DNF"
+    dest: /var/www/avaliacaocore/index.html
+    owner: nginx
+    group: nginx
+    mode: "0644"
+
+- name: Cria diretório SSL
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: "0755"
+
+- name: Gera certificado auto-assinado
+  command: >
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048
+    -keyout /etc/nginx/ssl/avaliacaocore.key
+    -out /etc/nginx/ssl/avaliacaocore.crt
+    -subj "/C=BR/ST=DF/L=Brasilia/O=Maya/CN=avaliacaocore.maya.local"
+  args:
+    creates: /etc/nginx/ssl/avaliacaocore.crt
+
+- name: Copia configuração do virtual host
+  template:
+    src: avaliacaocore.conf.j2
+    dest: /etc/nginx/conf.d/avaliacaocore.conf
+    mode: "0644"
+  notify: restart nginx
+
+- name: Remove configuração padrão do nginx
+  file:
+    path: /etc/nginx/conf.d/default.conf
+    state: absent
+  notify: restart nginx
+
+- name: Configura SELinux para o diretório web
+  command: semanage fcontext -a -t httpd_sys_content_t "/var/www/avaliacaocore(/.*)?"
+  ignore_errors: yes
+
+- name: Aplica contexto SELinux
+  command: restorecon -Rv /var/www/avaliacaocore/
+  ignore_errors: yes
+
+- name: Libera porta 81 no firewall
+  firewalld:
+    port: 81/tcp
+    permanent: yes
+    state: enabled
+  notify: restart firewalld
+
+- name: Libera porta 443 no firewall
+  firewalld:
+    port: 443/tcp
+    permanent: yes
+    state: enabled
+  notify: restart firewalld
+
+- name: Habilita e inicia nginx
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started

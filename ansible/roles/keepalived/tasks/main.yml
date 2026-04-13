@@ -1,0 +1,18 @@
+---
+- name: Instala keepalived
+  dnf:
+    name: keepalived
+    state: present
+
+- name: Copia configuração do keepalived
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    mode: "0644"
+  notify: restart keepalived
+
+- name: Habilita e inicia keepalived
+  systemd:
+    name: keepalived
+    enabled: yes
+    state: started

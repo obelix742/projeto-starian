@@ -1,0 +1,12 @@
+---
+- name: Configura logrotate nginx
+  copy:
+    src: avaliacaocore-nginx
+    dest: /etc/logrotate.d/avaliacaocore-nginx
+    mode: "0644"
+
+- name: Configura logrotate scripts
+  copy:
+    src: maya-scripts
+    dest: /etc/logrotate.d/maya-scripts
+    mode: "0644"

@@ -1,0 +1,13 @@
+/var/log/nginx/avaliacaocore.maya.nginx-access.log
+/var/log/nginx/avaliacaocore.maya.nginx-error.log {
+    daily
+    compress
+    missingok
+    notifempty
+    rotate 45
+    dateext
+    sharedscripts
+    postrotate
+        nginx -s reopen
+    endscript
+}

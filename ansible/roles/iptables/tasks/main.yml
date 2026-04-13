@@ -1,0 +1,54 @@
+---
+- name: Instala iptables-services e vsftpd
+  dnf:
+    name:
+      - iptables-services
+      - vsftpd
+    state: present
+
+- name: Desativa firewalld
+  systemd:
+    name: firewalld
+    enabled: no
+    state: stopped
+
+- name: Copia script de firewall
+  copy:
+    src: firewall.sh
+    dest: /opt/scripts/firewall.sh
+    mode: "0755"
+
+- name: Carrega módulo FTP
+  modprobe:
+    name: nf_conntrack_ftp
+    state: present
+
+- name: Persiste módulo FTP no boot
+  lineinfile:
+    path: /etc/modules-load.d/ftp.conf
+    line: "nf_conntrack_ftp"
+    create: yes
+
+- name: Executa script de firewall
+  command: /opt/scripts/firewall.sh
+
+- name: Salva regras iptables
+  command: service iptables save
+
+- name: Habilita iptables
+  systemd:
+    name: iptables
+    enabled: yes
+    state: started
+
+- name: Configura vsftpd
+  lineinfile:
+    path: /etc/vsftpd/ftpusers
+    regexp: "^root"
+    line: "#root"
+
+- name: Habilita e inicia vsftpd
+  systemd:
+    name: vsftpd
+    enabled: yes
+    state: started

@@ -1,0 +1,76 @@
+---
+- name: Instala Java 11
+  dnf:
+    name:
+      - java-11-openjdk
+      - java-11-openjdk-devel
+      - unzip
+    state: present
+
+- name: Cria diretório do JBoss
+  file:
+    path: /opt/jboss
+    state: directory
+    mode: "0755"
+
+- name: Copia e descompacta JBoss EAP
+  unarchive:
+    src: files/jboss-eap-7.4.0.zip
+    dest: /opt/
+    creates: /opt/jboss-eap-7.4
+
+- name: Renomeia diretório do JBoss
+  command: mv /opt/jboss-eap-7.4 /opt/jboss
+  args:
+    creates: /opt/jboss
+
+- name: Configura porta 9090 no standalone.xml
+  replace:
+    path: /opt/jboss/standalone/configuration/standalone.xml
+    regexp: "jboss.http.port:8080"
+    replace: "jboss.http.port:9090"
+
+- name: Cria serviço systemd do JBoss
+  template:
+    src: jboss.service.j2
+    dest: /etc/systemd/system/jboss.service
+    mode: "0644"
+  notify: reload systemd
+
+- name: Libera porta 9090 no firewall
+  firewalld:
+    port: 9090/tcp
+    permanent: yes
+    state: enabled
+  notify: restart firewalld
+
+- name: Habilita e inicia JBoss
+  systemd:
+    name: jboss
+    enabled: yes
+    state: started
+
+- name: Cria hello world war
+  shell: |
+    mkdir -p /tmp/hello/WEB-INF
+    cat > /tmp/hello/index.html << 'EOF'
+    <!DOCTYPE html>
+    <html>
+    <head><title>Hello World</title></head>
+    <body><h1>Hello World</h1><p>JBoss EAP 7.4 - porta 9090</p></body>
+    </html>
+    EOF
+    cat > /tmp/hello/WEB-INF/web.xml << 'EOF'
+    <?xml version="1.0" encoding="UTF-8"?>
+    <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+             version="3.1">
+        <welcome-file-list>
+            <welcome-file>index.html</welcome-file>
+        </welcome-file-list>
+    </web-app>
+    EOF
+    cd /tmp/hello && jar -cvf /opt/jboss/standalone/deployments/hello.war index.html WEB-INF/
+  args:
+    creates: /opt/jboss/standalone/deployments/hello.war

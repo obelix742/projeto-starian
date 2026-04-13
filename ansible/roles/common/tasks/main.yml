@@ -1,0 +1,77 @@
+---
+- name: Atualiza pacotes do sistema
+  dnf:
+    name: "*"
+    state: latest
+
+- name: Instala pacotes essenciais
+  dnf:
+    name:
+      - vim
+      - curl
+      - wget
+      - net-tools
+      - tcpdump
+      - lsof
+      - sysstat
+      - policycoreutils-python-utils
+    state: present
+
+- name: Desativa SELinux permanentemente
+  selinux:
+    state: permissive
+    policy: targeted
+
+- name: Configura /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "192.168.51.10  avaliacaocore.maya.local"
+    state: present
+
+- name: Cria grupo remoto
+  group:
+    name: remoto
+    state: present
+
+- name: Adiciona root ao grupo remoto
+  user:
+    name: root
+    groups: remoto
+    append: yes
+
+- name: Configura SSH para aceitar apenas grupo remoto
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    line: "AllowGroups remoto"
+    state: present
+  notify: restart sshd
+
+- name: Configura IP fixo vm01
+  nmcli:
+    conn_name: enp0s3
+    ifname: enp0s3
+    type: ethernet
+    ip4: "{{ ansible_host }}/27"
+    method4: manual
+    state: present
+  when: inventory_hostname == 'vm01'
+
+- name: Configura IP fixo vm02
+  nmcli:
+    conn_name: enp0s3
+    ifname: enp0s3
+    type: ethernet
+    ip4: "{{ ansible_host }}/27"
+    method4: manual
+    state: present
+  when: inventory_hostname == 'vm02'
+
+- name: Configura IP fixo vm03
+  nmcli:
+    conn_name: enp0s3
+    ifname: enp0s3
+    type: ethernet
+    ip4: "{{ ansible_host }}/27"
+    method4: manual
+    state: present
+  when: inventory_hostname == 'vm03'

@@ -1,0 +1,13 @@
+[Unit]
+Description=JBoss EAP 7.4
+After=network.target
+
+[Service]
+User=root
+Environment=JAVA_OPTS="-Xms384m -Xmx384m"
+ExecStart=/opt/jboss/bin/standalone.sh -b 0.0.0.0
+ExecStop=/opt/jboss/bin/jboss-cli.sh --connect command=:shutdown
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
