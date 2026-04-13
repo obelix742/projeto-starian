@@ -4,12 +4,9 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # permite rodar manualmente
+  workflow_dispatch:
 
 jobs:
-  # ============================================
-  # JOB 1 — Validação
-  # ============================================
   validate:
     name: 🔍 Valida Configurações
     runs-on: self-hosted
@@ -22,41 +19,47 @@ jobs:
         run: |
           cd vagrant
           vagrant validate
+        shell: pwsh
 
       - name: Valida sintaxe Ansible
         run: |
-          ansible-playbook ansible/site.yml --syntax-check
+          $wslPath = wsl wslpath "$env:GITHUB_WORKSPACE"
+          wsl bash -c "cd $wslPath && ansible-playbook ansible/site.yml --syntax-check"
+        shell: pwsh
 
       - name: Verifica arquivos essenciais
         run: |
-          echo "Verificando estrutura do projeto..."
-          test -f vagrant/Vagrantfile && echo "✅ Vagrantfile encontrado"
-          test -f ansible/site.yml && echo "✅ site.yml encontrado"
-          test -f ansible/inventory/hosts.yml && echo "✅ hosts.yml encontrado"
-          test -f ansible/roles/nginx/tasks/main.yml && echo "✅ role nginx encontrada"
-          test -f ansible/roles/keepalived/tasks/main.yml && echo "✅ role keepalived encontrada"
-          test -f ansible/roles/snmp/tasks/main.yml && echo "✅ role snmp encontrada"
-          test -f ansible/roles/scripts/tasks/main.yml && echo "✅ role scripts encontrada"
-          test -f ansible/roles/jboss/tasks/main.yml && echo "✅ role jboss encontrada"
-          test -f ansible/roles/iptables/tasks/main.yml && echo "✅ role iptables encontrada"
-          echo "✅ Todas as validações passaram!"
+          $files = @(
+            "vagrant/Vagrantfile",
+            "ansible/site.yml",
+            "ansible/inventory/hosts.yml",
+            "ansible/roles/nginx/tasks/main.yml",
+            "ansible/roles/keepalived/tasks/main.yml",
+            "ansible/roles/snmp/tasks/main.yml",
+            "ansible/roles/scripts/tasks/main.yml",
+            "ansible/roles/jboss/tasks/main.yml",
+            "ansible/roles/iptables/tasks/main.yml"
+          )
+          foreach ($file in $files) {
+            if (Test-Path $file) {
+              echo "✅ $file encontrado"
+            } else {
+              echo "❌ $file NAO encontrado"
+              exit 1
+            }
+          }
+        shell: pwsh
 
-  # ============================================
-  # JOB 2 — Aprovação Manual
-  # ============================================
   approval:
     name: ⏳ Aguarda Aprovação
     needs: validate
     runs-on: self-hosted
-    environment: production # aqui é onde a aprovação acontece
+    environment: production
 
     steps:
       - name: Aprovação recebida
         run: echo "✅ Deploy aprovado! Iniciando provisionamento..."
 
-  # ============================================
-  # JOB 3 — Provisionamento das VMs
-  # ============================================
   provision:
     name: 🖥️ Provisiona VMs com Vagrant
     needs: approval
@@ -69,22 +72,23 @@ jobs:
       - name: Derruba VMs existentes
         run: |
           cd vagrant
-          vagrant destroy -f || true
+          vagrant destroy -f
+        continue-on-error: true
+        shell: pwsh
 
       - name: Sobe as VMs
         run: |
           cd vagrant
           vagrant up
         timeout-minutes: 30
+        shell: pwsh
 
       - name: Verifica status das VMs
         run: |
           cd vagrant
           vagrant status
+        shell: pwsh
 
-  # ============================================
-  # JOB 4 — Configuração com Ansible
-  # ============================================
   configure:
     name: ⚙️ Configura com Ansible
     needs: provision
@@ -95,21 +99,21 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Aguarda VMs ficarem prontas
-        run: sleep 30
+        run: Start-Sleep -Seconds 30
+        shell: pwsh
 
       - name: Testa conectividade com as VMs
         run: |
-          ansible all -i ansible/inventory/hosts.yml -m ping
+          $wslPath = wsl wslpath "$env:GITHUB_WORKSPACE"
+          wsl bash -c "cd $wslPath && ansible all -i ansible/inventory/hosts.yml -m ping"
+        shell: pwsh
 
       - name: Roda playbook principal
         run: |
-          ansible-playbook ansible/site.yml \
-            -i ansible/inventory/hosts.yml \
-            -v
+          $wslPath = wsl wslpath "$env:GITHUB_WORKSPACE"
+          wsl bash -c "cd $wslPath && ansible-playbook ansible/site.yml -i ansible/inventory/hosts.yml -v"
+        shell: pwsh
 
-  # ============================================
-  # JOB 5 — Validação Final
-  # ============================================
   verify:
     name: ✅ Validação Final
     needs: configure
@@ -117,32 +121,46 @@ jobs:
 
     steps:
       - name: Testa nginx vm01
-        run: curl -s http://192.168.51.11:81 | grep "OLA MUNDO"
+        run: |
+          $wslPath = wsl wslpath "$env:GITHUB_WORKSPACE"
+          wsl bash -c "curl -s http://192.168.51.11:81 | grep 'OLA MUNDO'"
+        shell: pwsh
 
       - name: Testa nginx vm02
-        run: curl -s http://192.168.51.12:81 | grep "OLA MUNDO"
+        run: |
+          wsl bash -c "curl -s http://192.168.51.12:81 | grep 'OLA MUNDO'"
+        shell: pwsh
 
       - name: Testa nginx vm03
-        run: curl -s http://192.168.51.13:81 | grep "OLA MUNDO"
+        run: |
+          wsl bash -c "curl -s http://192.168.51.13:81 | grep 'OLA MUNDO'"
+        shell: pwsh
 
       - name: Testa VIP keepalived
-        run: curl -s http://192.168.51.10:81 | grep "OLA MUNDO"
+        run: |
+          wsl bash -c "curl -s http://192.168.51.10:81 | grep 'OLA MUNDO'"
+        shell: pwsh
 
       - name: Testa HTTPS
-        run: curl -sk https://192.168.51.10 | grep "OLA MUNDO"
+        run: |
+          wsl bash -c "curl -sk https://192.168.51.10 | grep 'OLA MUNDO'"
+        shell: pwsh
 
       - name: Testa JBoss vm02
-        run: curl -s http://192.168.51.12:9090/hello/ | grep "Hello World"
+        run: |
+          wsl bash -c "curl -s http://192.168.51.12:9090/hello/ | grep 'Hello World'"
+        shell: pwsh
 
       - name: Testa SNMP vm01
         run: |
-          snmpget -v2c -c public 192.168.51.11 \
-            UCD-SNMP-MIB::memTotalReal.0
+          wsl bash -c "snmpget -v2c -c public 192.168.51.11 UCD-SNMP-MIB::memTotalReal.0"
+        shell: pwsh
 
       - name: Verifica logs sendo gerados
         run: |
-          ssh root@192.168.51.11 "test -f /var/log/rede.log && echo '✅ rede.log OK'"
-          ssh root@192.168.51.11 "test -f /var/log/teste-snmp.log && echo '✅ teste-snmp.log OK'"
+          wsl bash -c "ssh -o StrictHostKeyChecking=no root@192.168.51.11 'test -f /var/log/rede.log && echo ✅ rede.log OK'"
+          wsl bash -c "ssh -o StrictHostKeyChecking=no root@192.168.51.11 'test -f /var/log/teste-snmp.log && echo ✅ teste-snmp.log OK'"
+        shell: pwsh
 
       - name: Resultado final
         run: |
@@ -155,3 +173,4 @@ jobs:
           echo "VIP:  192.168.51.10"
           echo "URL:  http://avaliacaocore.maya.local:81"
           echo "========================================="
+        shell: pwsh
