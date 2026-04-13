@@ -1,0 +1,6 @@
+*.vdi
+*.vmdk
+*.ova
+*.box
+vagrant/.vagrant/
+**/.vagrant/

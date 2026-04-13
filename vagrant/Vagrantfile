@@ -14,7 +14,6 @@ Vagrant.configure("2") do |config|
 
   config.ssh.insert_key = false
 
-  # VM01
   config.vm.define "vm01" do |vm01|
     vm01.vm.hostname = "vm01"
     vm01.vm.network "public_network",
@@ -24,15 +23,14 @@ Vagrant.configure("2") do |config|
 
     vm01.vm.provider "virtualbox" do |vb|
       vb.name = "vm01"
+      vb.customize ["modifyvm", :id, "--macaddress1", "auto"]
     end
 
     vm01.vm.provision "shell", inline: <<-SHELL
-      echo "Configurando vm01..."
       hostnamectl set-hostname vm01
     SHELL
   end
 
-  # VM02
   config.vm.define "vm02" do |vm02|
     vm02.vm.hostname = "vm02"
     vm02.vm.network "public_network",
@@ -43,15 +41,14 @@ Vagrant.configure("2") do |config|
     vm02.vm.provider "virtualbox" do |vb|
       vb.name = "vm02"
       vb.memory = 2048
+      vb.customize ["modifyvm", :id, "--macaddress1", "auto"]
     end
 
     vm02.vm.provision "shell", inline: <<-SHELL
-      echo "Configurando vm02..."
       hostnamectl set-hostname vm02
     SHELL
   end
 
-  # VM03
   config.vm.define "vm03" do |vm03|
     vm03.vm.hostname = "vm03"
     vm03.vm.network "public_network",
@@ -61,10 +58,10 @@ Vagrant.configure("2") do |config|
 
     vm03.vm.provider "virtualbox" do |vb|
       vb.name = "vm03"
+      vb.customize ["modifyvm", :id, "--macaddress1", "auto"]
     end
 
     vm03.vm.provision "shell", inline: <<-SHELL
-      echo "Configurando vm03..."
       hostnamectl set-hostname vm03
     SHELL
   end
