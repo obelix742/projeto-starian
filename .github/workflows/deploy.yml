@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  WSL_PROJECT_PATH: /mnt/c/Users/lucas/actions-runner/_work/projeto-starian/projeto-starian
+
 jobs:
   validate:
     name: 🔍 Valida Configurações
@@ -22,9 +25,7 @@ jobs:
         shell: pwsh
 
       - name: Valida sintaxe Ansible
-        run: |
-          $wslPath = wsl wslpath "$env:GITHUB_WORKSPACE"
-          wsl bash -c "cd $wslPath && ansible-playbook ansible/site.yml --syntax-check"
+        run: wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible-playbook ansible/site.yml --syntax-check"
         shell: pwsh
 
       - name: Verifica arquivos essenciais
@@ -103,15 +104,11 @@ jobs:
         shell: pwsh
 
       - name: Testa conectividade com as VMs
-        run: |
-          $wslPath = wsl wslpath "$env:GITHUB_WORKSPACE"
-          wsl bash -c "cd $wslPath && ansible all -i ansible/inventory/hosts.yml -m ping"
+        run: wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible all -i ansible/inventory/hosts.yml -m ping"
         shell: pwsh
 
       - name: Roda playbook principal
-        run: |
-          $wslPath = wsl wslpath "$env:GITHUB_WORKSPACE"
-          wsl bash -c "cd $wslPath && ansible-playbook ansible/site.yml -i ansible/inventory/hosts.yml -v"
+        run: wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible-playbook ansible/site.yml -i ansible/inventory/hosts.yml -v"
         shell: pwsh
 
   verify:
@@ -121,39 +118,31 @@ jobs:
 
     steps:
       - name: Testa nginx vm01
-        run: |
-          $wslPath = wsl wslpath "$env:GITHUB_WORKSPACE"
-          wsl bash -c "curl -s http://192.168.51.11:81 | grep 'OLA MUNDO'"
+        run: wsl bash -c "curl -s http://192.168.51.11:81 | grep 'OLA MUNDO'"
         shell: pwsh
 
       - name: Testa nginx vm02
-        run: |
-          wsl bash -c "curl -s http://192.168.51.12:81 | grep 'OLA MUNDO'"
+        run: wsl bash -c "curl -s http://192.168.51.12:81 | grep 'OLA MUNDO'"
         shell: pwsh
 
       - name: Testa nginx vm03
-        run: |
-          wsl bash -c "curl -s http://192.168.51.13:81 | grep 'OLA MUNDO'"
+        run: wsl bash -c "curl -s http://192.168.51.13:81 | grep 'OLA MUNDO'"
         shell: pwsh
 
       - name: Testa VIP keepalived
-        run: |
-          wsl bash -c "curl -s http://192.168.51.10:81 | grep 'OLA MUNDO'"
+        run: wsl bash -c "curl -s http://192.168.51.10:81 | grep 'OLA MUNDO'"
         shell: pwsh
 
       - name: Testa HTTPS
-        run: |
-          wsl bash -c "curl -sk https://192.168.51.10 | grep 'OLA MUNDO'"
+        run: wsl bash -c "curl -sk https://192.168.51.10 | grep 'OLA MUNDO'"
         shell: pwsh
 
       - name: Testa JBoss vm02
-        run: |
-          wsl bash -c "curl -s http://192.168.51.12:9090/hello/ | grep 'Hello World'"
+        run: wsl bash -c "curl -s http://192.168.51.12:9090/hello/ | grep 'Hello World'"
         shell: pwsh
 
       - name: Testa SNMP vm01
-        run: |
-          wsl bash -c "snmpget -v2c -c public 192.168.51.11 UCD-SNMP-MIB::memTotalReal.0"
+        run: wsl bash -c "snmpget -v2c -c public 192.168.51.11 UCD-SNMP-MIB::memTotalReal.0"
         shell: pwsh
 
       - name: Verifica logs sendo gerados
