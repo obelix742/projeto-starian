@@ -1,0 +1,23 @@
+---
+# Configurações comuns nas 3 VMs
+- name: Configurações comuns
+  hosts: vms
+  roles:
+    - common
+    - nginx
+    - keepalived
+    - snmp
+    - scripts
+    - logrotate
+
+# Configurações específicas vm02
+- name: Configura JBoss na vm02
+  hosts: vm02_group
+  roles:
+    - jboss
+
+# Configurações específicas vm03
+- name: Configura Iptables na vm03
+  hosts: vm03_group
+  roles:
+    - iptables
