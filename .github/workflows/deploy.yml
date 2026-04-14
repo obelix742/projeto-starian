@@ -5,9 +5,19 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      rebuild_vms:
+        description: "Recriar as VMs do zero? (true/false)"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 env:
   WSL_PROJECT_PATH: /mnt/c/Users/lucas/actions-runner/_work/projeto-starian/projeto-starian
+  VBOX_PATH: C:\Program Files\Oracle\VirtualBox
 
 jobs:
   validate:
@@ -25,7 +35,8 @@ jobs:
         shell: pwsh
 
       - name: Valida sintaxe Ansible
-        run: wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible-playbook ansible/site.yml --syntax-check"
+        run: |
+          wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible-playbook ansible/site.yml -i ansible/inventory/hosts.yml --syntax-check"
         shell: pwsh
 
       - name: Verifica arquivos essenciais
@@ -61,39 +72,82 @@ jobs:
       - name: Aprovação recebida
         run: echo "✅ Deploy aprovado! Iniciando provisionamento..."
 
+  cleanup:
+    name: 🧹 Limpeza das VMs
+    needs: approval
+    runs-on: self-hosted
+    if: github.event.inputs.rebuild_vms == 'true'
+
+    steps:
+      - name: Adiciona VBoxManage ao PATH
+        run: $env:PATH += ";$env:VBOX_PATH"
+        shell: pwsh
+
+      - name: Para as VMs no VirtualBox
+        run: |
+          $env:PATH += ";$env:VBOX_PATH"
+          VBoxManage controlvm vm01 poweroff 2>$null
+          VBoxManage controlvm vm02 poweroff 2>$null
+          VBoxManage controlvm vm03 poweroff 2>$null
+          Start-Sleep -Seconds 5
+        continue-on-error: true
+        shell: pwsh
+
+      - name: Remove as VMs do VirtualBox
+        run: |
+          $env:PATH += ";$env:VBOX_PATH"
+          VBoxManage unregistervm vm01 --delete 2>$null
+          VBoxManage unregistervm vm02 --delete 2>$null
+          VBoxManage unregistervm vm03 --delete 2>$null
+          Start-Sleep -Seconds 5
+        continue-on-error: true
+        shell: pwsh
+
+      - name: Remove pastas residuais das VMs
+        run: |
+          Remove-Item "E:\VirtualBox-VMs\vm01" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "E:\VirtualBox-VMs\vm02" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "E:\VirtualBox-VMs\vm03" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "C:\Users\lucas\VirtualBox VMs\vm01" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "C:\Users\lucas\VirtualBox VMs\vm02" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "C:\Users\lucas\VirtualBox VMs\vm03" -Recurse -Force -ErrorAction SilentlyContinue
+        shell: pwsh
+
+      - name: Limpa cache do Vagrant
+        run: |
+          vagrant global-status --prune
+        shell: pwsh
+
+      - name: Confirma limpeza
+        run: |
+          $env:PATH += ";$env:VBOX_PATH"
+          echo "VMs restantes no VirtualBox:"
+          VBoxManage list vms
+        shell: pwsh
+
   provision:
     name: 🖥️ Provisiona VMs com Vagrant
-    needs: approval
+    needs: cleanup
+    if: always() && needs.approval.result == 'success'
     runs-on: self-hosted
 
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v3
 
-      - name: Verifica se VMs já existem
-        id: check_vms
+      - name: Liga VMs existentes (se rebuild=false)
+        if: github.event.inputs.rebuild_vms != 'true'
         run: |
-          $env:PATH += ";C:\Program Files\Oracle\VirtualBox"
-          $vms = VBoxManage list vms
-          if ($vms -match "vm01") {
-            echo "vms_exist=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            echo "✅ VMs já existem, pulando provisionamento"
-          } else {
-            echo "vms_exist=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            echo "⚠️ VMs não encontradas, provisionando..."
-          }
-        shell: pwsh
-
-      - name: Derruba VMs existentes
-        if: steps.check_vms.outputs.vms_exist == 'false'
-        run: |
-          cd vagrant
-          vagrant destroy -f
+          $env:PATH += ";$env:VBOX_PATH"
+          VBoxManage startvm vm01 --type headless 2>$null
+          VBoxManage startvm vm02 --type headless 2>$null
+          VBoxManage startvm vm03 --type headless 2>$null
+          Start-Sleep -Seconds 30
         continue-on-error: true
         shell: pwsh
 
-      - name: Sobe as VMs
-        if: steps.check_vms.outputs.vms_exist == 'false'
+      - name: Cria VMs do zero (se rebuild=true)
+        if: github.event.inputs.rebuild_vms == 'true'
         run: |
           cd vagrant
           vagrant up
@@ -102,7 +156,7 @@ jobs:
 
       - name: Verifica status das VMs
         run: |
-          $env:PATH += ";C:\Program Files\Oracle\VirtualBox"
+          $env:PATH += ";$env:VBOX_PATH"
           VBoxManage list runningvms
         shell: pwsh
 
@@ -120,11 +174,13 @@ jobs:
         shell: pwsh
 
       - name: Testa conectividade com as VMs
-        run: wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible all -i ansible/inventory/hosts.yml -m ping"
+        run: |
+          wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible all -i ansible/inventory/hosts.yml -m ping"
         shell: pwsh
 
       - name: Roda playbook principal
-        run: wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible-playbook ansible/site.yml -i ansible/inventory/hosts.yml -v"
+        run: |
+          wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible-playbook ansible/site.yml -i ansible/inventory/hosts.yml -v"
         shell: pwsh
 
   verify:
