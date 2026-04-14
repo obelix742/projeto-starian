@@ -18,7 +18,7 @@ Vagrant.configure("2") do |config|
     vm01.vm.hostname = "vm01"
     # Bridge sem IP fixo — pega DHCP da rede real 192.168.68.x
     vm01.vm.network "public_network",
-      bridge: "vEthernet (Switch de VM Externo)"
+      bridge: "Hyper-V Virtual Ethernet Adapter #3"
 
     vm01.vm.provider "virtualbox" do |vb|
       vb.name = "vm01"
@@ -32,7 +32,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "vm02" do |vm02|
     vm02.vm.hostname = "vm02"
     vm02.vm.network "public_network",
-      bridge: "vEthernet (Switch de VM Externo)"
+      bridge: "Hyper-V Virtual Ethernet Adapter #3"
 
     vm02.vm.provider "virtualbox" do |vb|
       vb.name = "vm02"
@@ -47,7 +47,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "vm03" do |vm03|
     vm03.vm.hostname = "vm03"
     vm03.vm.network "public_network",
-      bridge: "vEthernet (Switch de VM Externo)"
+      bridge: "Hyper-V Virtual Ethernet Adapter #3"
 
     vm03.vm.provider "virtualbox" do |vb|
       vb.name = "vm03"
