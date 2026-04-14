@@ -20,7 +20,6 @@ env:
   VBOX_PATH: C:\Program Files\Oracle\VirtualBox
 
 jobs:
-
   validate:
     name: 🔍 Valida Configurações
     runs-on: self-hosted
@@ -171,60 +170,7 @@ jobs:
 
       - name: Descobre IPs das VMs e gera inventory
         run: |
-          $env:PATH += ";$env:VBOX_PATH"
-
-          $ip01 = (VBoxManage guestproperty get vm01 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ",""
-          $ip02 = (VBoxManage guestproperty get vm02 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ",""
-          $ip03 = (VBoxManage guestproperty get vm03 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ",""
-
-          $ip01 = $ip01.Trim()
-          $ip02 = $ip02.Trim()
-          $ip03 = $ip03.Trim()
-
-          echo "vm01 IP: $ip01"
-          echo "vm02 IP: $ip02"
-          echo "vm03 IP: $ip03"
-
-          $inventory = @"
-all:
-  vars:
-    ansible_user: vagrant
-    ansible_ssh_private_key_file: /mnt/c/Users/lucas/.vagrant.d/insecure_private_keys/vagrant.key.ed25519
-    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-    ansible_become: yes
-    ansible_become_method: sudo
-
-  children:
-    vms:
-      hosts:
-        vm01:
-          ansible_host: $ip01
-          vm_ip: 192.168.51.11
-          keepalived_state: MASTER
-          keepalived_priority: 110
-        vm02:
-          ansible_host: $ip02
-          vm_ip: 192.168.51.12
-          keepalived_state: BACKUP
-          keepalived_priority: 100
-        vm03:
-          ansible_host: $ip03
-          vm_ip: 192.168.51.13
-          keepalived_state: BACKUP
-          keepalived_priority: 90
-
-    vm01_group:
-      hosts:
-        vm01:
-    vm02_group:
-      hosts:
-        vm02:
-    vm03_group:
-      hosts:
-        vm03:
-"@
-          $inventory | Out-File -FilePath "ansible/inventory/hosts.yml" -Encoding UTF8
-          echo "✅ Inventory gerado com IPs dinâmicos"
+          .\ansible\inventory\generate-inventory.ps1 -OutputPath "ansible/inventory/hosts.yml"
         shell: pwsh
 
       - name: Testa conectividade com as VMs
