@@ -47,31 +47,10 @@
   notify: restart sshd
 
 - name: Configura IP fixo vm01
-  nmcli:
-    conn_name: enp0s3
-    ifname: enp0s3
-    type: ethernet
-    ip4: "{{ ansible_host }}/27"
-    method4: manual
-    state: present
   when: inventory_hostname == 'vm01'
 
 - name: Configura IP fixo vm02
-  nmcli:
-    conn_name: enp0s3
-    ifname: enp0s3
-    type: ethernet
-    ip4: "{{ ansible_host }}/27"
-    method4: manual
-    state: present
   when: inventory_hostname == 'vm02'
 
 - name: Configura IP fixo vm03
-  nmcli:
-    conn_name: enp0s3
-    ifname: enp0s3
-    type: ethernet
-    ip4: "{{ ansible_host }}/27"
-    method4: manual
-    state: present
   when: inventory_hostname == 'vm03'

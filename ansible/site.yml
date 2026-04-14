@@ -21,3 +21,9 @@
   hosts: vm03_group
   roles:
     - iptables
+
+# Configura IPs fixos por último
+- name: Configura IPs fixos
+  hosts: vms
+  roles:
+    - network

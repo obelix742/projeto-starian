@@ -1,0 +1,19 @@
+---
+- name: Configura IP fixo na interface bridge
+  nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: "{{ vm_ip }}/27"
+    method4: manual
+    state: present
+
+- name: Ativa a interface
+  command: nmcli connection up eth1
+  ignore_errors: yes
+
+- name: Configura /etc/hosts com VIP
+  lineinfile:
+    path: /etc/hosts
+    line: "192.168.51.10  avaliacaocore.maya.local"
+    state: present
