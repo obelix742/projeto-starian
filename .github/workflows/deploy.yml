@@ -173,6 +173,11 @@ jobs:
           .\ansible\inventory\generate-inventory.ps1 -OutputPath "ansible/inventory/hosts.yml"
         shell: pwsh
 
+      - name: Configura chave SSH no WSL
+        run: |
+          wsl bash -c "mkdir -p ~/.vagrant-keys && cp /mnt/c/Users/lucas/.vagrant.d/insecure_private_keys/vagrant.key.ed25519 ~/.vagrant-keys/ && chmod 600 ~/.vagrant-keys/vagrant.key.ed25519"
+        shell: pwsh
+
       - name: Testa conectividade com as VMs
         run: |
           wsl bash -c "cd $env:WSL_PROJECT_PATH && ansible all -i ansible/inventory/hosts.yml -m ping"
