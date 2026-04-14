@@ -45,12 +45,3 @@
     line: "AllowGroups remoto"
     state: present
   notify: restart sshd
-
-- name: Configura IP fixo vm01
-  when: inventory_hostname == 'vm01'
-
-- name: Configura IP fixo vm02
-  when: inventory_hostname == 'vm02'
-
-- name: Configura IP fixo vm03
-  when: inventory_hostname == 'vm03'
