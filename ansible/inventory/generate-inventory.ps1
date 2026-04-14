@@ -1,12 +1,12 @@
 param(
-    [string]$OutputPath = "ansible/inventory/hosts.yml"
+  [string]$OutputPath = "ansible/inventory/hosts.yml"
 )
 
 $env:PATH += ";C:\Program Files\Oracle\VirtualBox"
 
-$ip01 = (VBoxManage guestproperty get vm01 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ",""
-$ip02 = (VBoxManage guestproperty get vm02 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ",""
-$ip03 = (VBoxManage guestproperty get vm03 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ",""
+$ip01 = (VBoxManage guestproperty get vm01 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ", ""
+$ip02 = (VBoxManage guestproperty get vm02 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ", ""
+$ip03 = (VBoxManage guestproperty get vm03 "/VirtualBox/GuestInfo/Net/1/V4/IP") -replace "Value: ", ""
 
 $ip01 = $ip01.Trim()
 $ip02 = $ip02.Trim()
@@ -19,7 +19,7 @@ Write-Host "vm03 IP: $ip03"
 $inventory = "all:`n"
 $inventory += "  vars:`n"
 $inventory += "    ansible_user: vagrant`n"
-$inventory += "    ansible_ssh_private_key_file: /mnt/c/Users/lucas/.vagrant.d/insecure_private_keys/vagrant.key.ed25519`n"
+$inventory += "    ansible_ssh_private_key_file: ~/.vagrant-keys/vagrant.key.ed25519`n"
 $inventory += "    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'`n"
 $inventory += "    ansible_become: yes`n"
 $inventory += "    ansible_become_method: sudo`n"
